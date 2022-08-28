@@ -1,0 +1,6 @@
+descricao;AUC
+Random forest com validação cruzada;0.9892
+Regressão logística com seleção gradual;0.9885
+Árvore de decisão;0.9854
+Random forest sem county;0.9836
+Random forest dummy county;0.9808

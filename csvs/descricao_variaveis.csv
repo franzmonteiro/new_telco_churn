@@ -1,0 +1,49 @@
+nome|descricao
+age|idade do cliente, em anos, ao término do trimestre fiscal.
+avg monthly gb download|volume mensal médio de download do cliente, em gigabytes, calculado até o final do trimestre.
+avg monthly long distance charges|valor mensal médio das cobranças de chamadas de longas distâncias, calculado até o final do trimestre.
+churn category|categoria de alto-nível, para o motivo do cancelamento do cliente;atitude; concorrente; insatisfação; outro; preço. Todos os clientes, ao deixarem a companhia, são questionados sobre o motivo da saída. Diretamente relacionada à variável "churn reason".
+churn label|yes = O cliente deixou a companhia neste trimestre. no = O cliente continuou com a companhia. Diretamente relacionada a variável "churn value"
+churn reason|Motivo específico de um cliente ter deixado a companhia. Diretamente relacionada à variável "churn category"
+churn score category|Um cálculo que atribui um score de churn, a uma das seguintes categorias;0-10; 11-20; 21-30; 31-40; 41-50; 51-60; 61-70; 71-80; 81-90; e 91-100
+churn score|um valor de 0 a 100, calculado utilizando a ferramenta preditiva ibm spss modeler. O modelo incorpora diversos fatores conhecidos por causarem churn. Quanto maior o score, maior a chance do cliente deixar a companhia.
+churn value|1 = O cliente deixou a companhia neste trimestre. 0 = O cliente continuou com a companhia. Diretamente relacionada à variável "churn label".
+city|Cidade da residência principal do cliente.
+cltv category|Um cálculo que atribui um valor cltv a uma das seguintes categorias;2000-2500; 2501-3000; 3001-3500; 3501-4000; 4001-4500; 4501-5000; 5001-5500; 5501-6000; 6001-6500; e 6501-7000.
+cltv|Valor de tempo de vida. Um cltv previsto, é calculado utilizando fórmulas corporativas e dados existentes. Quanto maior o valor, mais valioso o cliente. Clientes de alto valor devem ser monitorados para churn.
+contract|Tipo de contrato atual do cliente;mês a mês, um ano, dois anos.
+country|País da residência principal do cliente.
+customer status|Indica o status do cliente ao final do trimestre;deixou, permaneceu, ou juntou-se à companhia.
+dependents|Indica se o cliente mora com quaisquer dependentes;yes, no. Dependentes podem ser filhos, pais, avós, etc.
+device protection plan|Indica se o cliente assina a um plano adicional de proteção do dispositivo, para seu equipamento de internet, fornecido pela companhia;yes, no
+gender|sexo do cliente;male, female
+internet service|Indica se o cliente assina serviço de internet da companhia;no, dsl, fiber optic, cable.
+married|Indica se o cliente é casado;yes, no
+monthly charge|Indica a atual cobrança mensal total do cliente, por todos os serviços que utiliza da companhia.
+multiple lines|Indica se o cliente assina múltiplas linhas telefônicas da companhia;yes, no.
+number of dependents|quantidade de dependentes que moram com o cliente.
+number of referrals|quantidade de indicações até o presente, feitas pelo cliente.
+offer|última oferta de marketing que o cliente aceitou, se aplicável. Os valores incluem none; offer a; offer b; offer c; offer d; e offer e.
+online backup|Indica se o cliente assina um serviço adicional de backup online, fornecido pela companhia;yes, no
+online security|Indica se o cliente assina um serviço adicional de segurança online, fornecido pela companhia;yes, no
+paperless billing|Indica se o cliente optou por cobrança sem papel;yes, no.
+payment method|Indica como o cliente paga a conta;bank withdrawal; credit card; mailed check.
+phone service|Indica se o cliente assina serviço de telefonia residencial da companhia;yes, no.
+population|Estimativa da população atual, de todo o cep.
+premium tech support|Indica se o cliente assina um plano adicional de suporte técnico da companhia, com tempos reduzidos de espera;yes, no.
+quarter|trimestre fiscal, dos quais os dados são originados (e.g. q3).
+referred a friend|Indica se o cliente alguma vez indicou um amigo ou membro da família à esta companhia;yes, no.
+satisfaction score label|Indica a versão de texto do score (1-5).
+satisfaction score|Índice da satisfação geral do cliente com a companhia, de 1 (muito insatisfeito) a 5 (muito satisfeito).
+senior citizen|indica se o cliente tem 65 anos ou mais;yes, no
+state|Estado da residência principal do cliente.
+streaming movies|Indica se o cliente utiliza seu serviço de internet para assistir filmes de um fornecedor externo;yes, no. A companhia não cobra uma taxa adicional por este serviço.
+streaming music|Indica se o cliente utiliza seu serviço de internet para escutar música de um fornecedor externo;yes, no. A companhia não cobra uma taxa adicional por este serviço.
+streaming tv|Indica se o cliente utiliza seu serviço de internet para assistir programas de televisão de um fornecedor externo;yes, no. A companhia não cobra uma taxa adicional por este serviço.
+tenure in months|Indica a quantidade total de meses que o cliente está com a companhia ao final do trimestre.
+total charges|Indica as cobranças totais do cliente, calculadas até o final do trimestre.
+total extra data charges|Indica as cobranças totais do cliente, por downloads de dados extras, acima do especificado em seu plano, ao final do trimestre.
+total long distance charges|Indica as cobranças totais do cliente, por chamadas de longa distância, acima das especificadas em seu plano, ao final do trimestre.
+total refunds|Indica os reembolsos totais do cliente, calculados até o final do trimestre.
+unlimited data|Indica se o cliente pagou uma taxa mensal adicional, para ter downloads/uploads ilimitados;yes, no.
+zip code|Cep da residência principal do cliente.
