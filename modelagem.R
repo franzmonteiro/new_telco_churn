@@ -162,7 +162,7 @@ rm(list = c('tc_demographics', 'tc_location', 'tc_population', 'tc_services', 't
 # Funcoes
 get_indicadores_modelo <- function(modelo, conjunto_teste, cutoff = 0.5, descricao) {
     
-    if(inherits(modelo, 'glm')) {
+    if(inherits(modelo, 'glm') | inherits(modelo, 'glmerMod')) {
         tmp_model_stats <- confusionMatrix(as.factor(ifelse(predict(modelo, conjunto_teste, type = 'response') >= cutoff, 1, 0)),
                                            reference = conjunto_teste$flg_churn,
                                            positive = '1',
@@ -327,6 +327,68 @@ AIC(modelo_rl_tudo)
 #                                 scope = list(lower = modelo_rl_vazio, upper = modelo_rl_tudo),
 #                                 trace = 1)
 
+aic_modelo_rl_forward <- read_delim('csvs_redacao/modelo_rl_forward.csv', delim = ';') %>% 
+    mutate(criterio = 'Progressiva',
+           step = row_number())
+
+aic_modelo_rl_backward <- read_delim('csvs_redacao/modelo_rl_backward.csv', delim = ';') %>% 
+    mutate(criterio = 'Regressiva',
+           step = row_number())
+
+aic_modelo_rl_both <- read_delim('csvs_redacao/modelo_rl_both.csv', delim = ';') %>% 
+    mutate(criterio = 'Ambas',
+           step = row_number())
+
+aic_modelos_rl <- aic_modelo_rl_forward %>% 
+    rbind(aic_modelo_rl_backward) %>% 
+    rbind(aic_modelo_rl_both) %>% 
+    mutate(criterio = as_factor(criterio),
+           qtd_variaveis = ifelse(formula_modelo == 'flg_churn ~ 1',
+                                  0,
+                                  str_count(formula_modelo, '[+]') + 1))
+
+to_plot_aic_modelos_rl <- aic_modelos_rl %>% 
+    pivot_longer(c(aic, qtd_variaveis), names_to = 'var', values_to = 'value') %>% 
+    mutate(var = case_when(var == 'aic' ~ 'AIC',
+                           var == 'qtd_variaveis' ~ 'Quantidade de variáveis',
+                           T ~ 'Outro'))
+
+ggplot(to_plot_aic_modelos_rl %>% 
+           filter(var == 'AIC'), aes(step, value, color = criterio)) +
+    geom_line() +
+    scale_color_viridis_d() +
+    labs(x = 'Iteração', y = 'AIC', color = 'Direção')
+
+ggsave("plots/modelos_rl_stepwise_reducao_dos_aics.png", width = 9, height = 5)
+
+
+ggplot(to_plot_aic_modelos_rl %>% 
+           filter(var == 'Quantidade de variáveis'), aes(step, value, color = criterio)) +
+    geom_line() +
+    scale_color_viridis_d() +
+    labs(x = 'Iteração', y = 'Quantidade de variáveis', color = 'Direção')
+
+ggsave("plots/modelos_rl_stepwise_qtd_variaveis.png", width = 9, height = 5)
+
+
+resumo_modelos_rl <- aic_modelos_rl %>% 
+    select(-descricao) %>% 
+    group_by(criterio) %>% 
+    summarise(across(everything(), list(first = first, last = last), .names = '{.fn}_{.col}')) %>% 
+    pivot_longer(matches('first_|last_'),
+                 names_to = c('descricao', '.value'),
+                 names_pattern = '(first|last)_(.+)') %>% 
+    arrange(criterio, descricao) %>% 
+    select(criterio, descricao, step, aic, qtd_variaveis) %>% 
+    mutate(descricao = ifelse(descricao == 'first', 'primeira', 'última')) %>% 
+    rename(iteracao = step)
+
+write_delim(resumo_modelos_rl, 'csvs_redacao/resumo_modelos_rl_stepwise.csv', delim = ';')    
+
+
+
+
+
 ### Melhor modelo obtido, com AIC = 836.78. criterio both
 
 modelo_rl_both <- glm(flg_churn ~ satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + number_of_referrals + monthly_charge + tx_concentracao_cobranca_mes_q3 + contract_Two_Year + flg_married + number_of_dependents + county_San_Diego_County + flg_premium_tech_support + flg_phone_service + contract_One_Year + offer_Offer_E + county_Mendocino_County + offer_Offer_A + county_Lake_County + age + county_Nevada_County + tx_contrib_cobrancas_extras_cobranca_geral + county_Fresno_County + county_El_Dorado_County + county_Tulare_County + total_charges + county_San_Mateo_County + avg_monthly_long_distance_charges + valor_cobrancas_extras + internet_type_Fiber_Optic + flg_online_backup,
@@ -346,7 +408,7 @@ coef_modelo_rl_both <- summary(modelo_rl_both)$coefficients %>%
 write_delim(coef_modelo_rl_both, 'csvs_redacao/coeficientes_estimados_modelo_rl_both.csv', delim = ';')
 
 indicadores_modelo_rl_both <- seq(0.1, 0.9, 0.05) %>% 
-    map_dfr(~ get_indicadores_modelo(modelo_rl_both, dummies_tc_test, cutoff = .x, 'Regressão logística com seleção gradual')) %>% 
+    map_dfr(~ get_indicadores_modelo(modelo_rl_both, dummies_tc_test, cutoff = .x, 'Regressão logística stepwise')) %>% 
     mutate(AIC = AIC(modelo_rl_both))
 
 to_plot_indicadores_modelo_rl_both <- indicadores_modelo_rl_both %>% 
@@ -513,37 +575,6 @@ write_delim(indicadores_rf_caret %>%
                 mutate(across(where(is.double), ~ round(.x, 3))), 'csvs_redacao/indicadores_rf_com_validacao_cruzada.csv', delim = ';')
 
 
-indicadores_diversos_modelos <- rbind(select(indicadores_modelo_rl_both, -AIC),
-                                      indicadores_arvore,
-                                      indicadores_rf_sem_county,
-                                      indicadores_rf_dummy,
-                                      indicadores_rf_caret)
-
-to_plot_indicadores_diversos_modelos <- indicadores_diversos_modelos %>% 
-    pivot_longer(c(`Acurácia`, Sensitividade, Especificidade), names_to = 'nome_indicador', values_to = 'indicador')
-
-ggplot(to_plot_indicadores_diversos_modelos,
-       aes(`Ponto de corte`, indicador, color = descricao)) +
-    geom_line() +
-    # geom_point(aes(shape = descricao)) +
-    geom_point() +
-    # scale_color_viridis_d(option = 'D') +
-    scale_color_viridis_d(option = 'C') +
-    facet_wrap(~ nome_indicador) +
-    labs(y = NULL, color = 'Modelo') +
-    theme(legend.position = 'bottom')
-
-ggsave("plots/indicadores_diversos_modelos.png", width = 12, height = 6)
-
-auc_modelos <- indicadores_diversos_modelos %>% 
-    select(descricao, AUC) %>% 
-    distinct() %>% 
-    arrange(desc(AUC)) %>% 
-    mutate(across(where(is.double), ~ round(.x, 4)))
-
-write_delim(auc_modelos, 'csvs_redacao/auc_diversos_modelos.csv', delim = ';')
-
-
 ## Regressao logistica multinivel
 
 # efeitos aleatorios para testar
@@ -602,7 +633,147 @@ tc_scaled_dummies_test <- tc_scaled_dummies[-train_idx,]
 modelo_rl_multinivel_flg_internet_service <- glmer(flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + tx_concentracao_cobranca_mes_q3 + number_of_referrals + flg_married + number_of_dependents + contract_Two_Year + internet_type_Fiber_Optic + qtd_streamings + contract_One_Year + age + offer_Offer_E + offer_Offer_A + county_El_Dorado_County + flg_device_protection_plan + cltv + flg_multiple_lines + total_charges + valor_cobranca_geral + county_Colusa_County + flg_phone_service + condado_indice_gini_desigualdade_renda + county_Plumas_County + county_Lassen_County + county_Monterey_County + county_Shasta_County + condado_renda_familiar_mediana + condado_idade_mediana_habitantes + county_Trinity_County + county_Tuolumne_County + condado_tx_habitantes_homens + county_Ventura_County + county_Solano_County + condado_tx_habitantes_menor_18_anos + county_Santa_Cruz_County + county_Inyo_County + condado_densidade_populacional + county_Contra_Costa_County + county_Napa_County + county_Santa_Barbara_County + county_Stanislaus_County + county_Glenn_County + qtd_servicos_adicionais + county_Mariposa_County + county_San_Benito_County + county_Calaveras_County + county_Humboldt_County + county_Tehama_County + county_Imperial_County + county_Modoc_County + county_Yolo_County + county_Siskiyou_County + county_Santa_Clara_County + county_Madera_County + county_Marin_County + county_Orange_County + county_Los_Angeles_County + county_Kern_County + county_San_Francisco_County + condado_area_terra_m2 + (1 | flg_internet_service),
                                                    data = tc_scaled_dummies_train,
                                                    family = binomial,
-                                                   control = glmerControl(optimizer = c("bobyqa", "Nelder_Mead")),
-                                                   nAGQ = 1)
+                                                   nAGQ = 0)
 
-summary(modelo_rl_multinivel_flg_internet_service)
+AIC(modelo_rl_multinivel_flg_internet_service)
+
+indicadores_modelo_rl_multinivel_flg_internet_service <- seq(0.1, 0.9, 0.05) %>%
+    map_dfr(~ get_indicadores_modelo(modelo_rl_multinivel_flg_internet_service, tc_scaled_dummies_test, cutoff = .x,
+                                     "Regressão logística multinível stepwise, tendo 'flg_internet_service' como efeito aleatório")) %>% 
+    mutate(AIC = AIC(modelo_rl_multinivel_flg_internet_service))
+
+to_plot_indicadores_modelo_rl_multinivel_flg_internet_service <- indicadores_modelo_rl_multinivel_flg_internet_service %>% 
+    pivot_longer(c(`Acurácia`, Sensitividade, Especificidade), names_to = 'nome_indicador', values_to = 'indicador')
+
+ggplot(to_plot_indicadores_modelo_rl_multinivel_flg_internet_service,
+       aes(`Ponto de corte`, indicador, color = nome_indicador)) +
+    geom_line() +
+    geom_point() +
+    scale_color_viridis_d(option = 'D') +
+    labs(y = NULL, color = 'Indicador')
+
+
+
+## contract
+variaveis_dummizar <- tc_scaled %>%
+    select(!where(is.double)) %>%
+    select(-matches('flg_')) %>%
+    select(-any_of(c('contract'))) %>%
+    colnames()
+
+tc_scaled_dummies <- dummy_columns(.data = tc_scaled,
+                                   select_columns = variaveis_dummizar,
+                                   remove_selected_columns = TRUE,
+                                   remove_first_dummy = TRUE) %>%
+    rename_with(~ str_replace_all(.x, ' ', '_'), matches(' '))
+
+set.seed(3)
+train_idx <- createDataPartition(tc_scaled_dummies$flg_churn, p = .7, list = F)
+tc_scaled_dummies_train <- tc_scaled_dummies[train_idx,]
+tc_scaled_dummies_test <- tc_scaled_dummies[-train_idx,]
+
+
+modelo_rl_multinivel_contract <- glmer(flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + number_of_referrals + monthly_charge + tx_concentracao_cobranca_mes_q3 + flg_married + number_of_dependents + county_San_Diego_County + flg_premium_tech_support + offer_Offer_E + county_Mendocino_County + county_Lake_County + offer_Offer_A + age + county_Nevada_County + tx_contrib_cobrancas_extras_cobranca_geral + county_Fresno_County + flg_streaming_music + avg_monthly_long_distance_charges + internet_type_Fiber_Optic + qtd_streamings + county_Colusa_County + valor_cobranca_geral + county_Lassen_County + cltv + internet_type_None + qtd_servicos_principais + county_Santa_Barbara_County + county_Mariposa_County + county_Tehama_County + qtd_servicos_adicionais + county_Modoc_County + county_Siskiyou_County + county_Calaveras_County + condado_idade_mediana_habitantes + (1 | contract),
+                                       data = tc_scaled_dummies_train,
+                                       family = binomial,
+                                       nAGQ = 0)
+
+AIC(modelo_rl_multinivel_contract)
+
+indicadores_modelo_rl_multinivel_contract <- seq(0.1, 0.9, 0.05) %>%
+    map_dfr(~ get_indicadores_modelo(modelo_rl_multinivel_contract, tc_scaled_dummies_test, cutoff = .x,
+                                     "Regressão logística multinível stepwise, tendo 'contract' como efeito aleatório")) %>% 
+    mutate(AIC = AIC(modelo_rl_multinivel_contract))
+
+to_plot_indicadores_modelo_rl_multinivel_contract <- indicadores_modelo_rl_multinivel_contract %>% 
+    pivot_longer(c(`Acurácia`, Sensitividade, Especificidade), names_to = 'nome_indicador', values_to = 'indicador')
+
+ggplot(to_plot_indicadores_modelo_rl_multinivel_contract,
+       aes(`Ponto de corte`, indicador, color = nome_indicador)) +
+    geom_line() +
+    geom_point() +
+    scale_color_viridis_d(option = 'D') +
+    labs(y = NULL, color = 'Indicador')
+
+
+## offer
+variaveis_dummizar <- tc_scaled %>%
+    select(!where(is.double)) %>%
+    select(-matches('flg_')) %>%
+    select(-any_of(c('offer'))) %>%
+    colnames()
+
+tc_scaled_dummies <- dummy_columns(.data = tc_scaled,
+                                   select_columns = variaveis_dummizar,
+                                   remove_selected_columns = TRUE,
+                                   remove_first_dummy = TRUE) %>%
+    rename_with(~ str_replace_all(.x, ' ', '_'), matches(' '))
+
+set.seed(3)
+train_idx <- createDataPartition(tc_scaled_dummies$flg_churn, p = .7, list = F)
+tc_scaled_dummies_train <- tc_scaled_dummies[train_idx,]
+tc_scaled_dummies_test <- tc_scaled_dummies[-train_idx,]
+
+
+modelo_rl_multinivel_offer <- glmer(flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + internet_type_None + number_of_referrals + tx_concentracao_cobranca_mes_q3 + flg_married + number_of_dependents + contract_Two_Year + monthly_charge + county_San_Diego_County + flg_premium_tech_support + qtd_servicos_principais + contract_One_Year + county_Mendocino_County + county_Lake_County + county_Nevada_County + age + county_Tulare_County + county_Fresno_County + tx_contrib_cobrancas_extras_cobranca_geral + county_El_Dorado_County + internet_type_Fiber_Optic + flg_online_backup + county_San_Mateo_County + cltv + county_Colusa_County + avg_monthly_long_distance_charges + county_Lassen_County + condado_renda_familiar_mediana + county_Shasta_County + county_Plumas_County + condado_idade_mediana_habitantes + county_Trinity_County + county_Tuolumne_County + valor_cobranca_geral + total_charges + flg_streaming_tv + flg_streaming_movies + flg_streaming_music + county_Monterey_County + county_Santa_Barbara_County + (1 | offer),
+                                    data = tc_scaled_dummies_train,
+                                    family = binomial,
+                                    nAGQ = 0)
+
+AIC(modelo_rl_multinivel_offer)
+summary(modelo_rl_multinivel_offer)
+
+indicadores_modelo_rl_multinivel_offer <- seq(0.1, 0.9, 0.05) %>%
+    map_dfr(~ get_indicadores_modelo(modelo_rl_multinivel_offer, tc_scaled_dummies_test, cutoff = .x,
+                                     "Regressão logística multinível stepwise, tendo 'offer' como efeito aleatório")) %>%
+    mutate(AIC = AIC(modelo_rl_multinivel_offer))
+
+to_plot_indicadores_modelo_rl_multinivel_offer <- indicadores_modelo_rl_multinivel_offer %>% 
+    pivot_longer(c(`Acurácia`, Sensitividade, Especificidade), names_to = 'nome_indicador', values_to = 'indicador')
+
+ggplot(to_plot_indicadores_modelo_rl_multinivel_offer,
+       aes(`Ponto de corte`, indicador, color = nome_indicador)) +
+    geom_line() +
+    geom_point() +
+    scale_color_viridis_d(option = 'D') +
+    labs(y = NULL, color = 'Indicador')
+
+
+indicadores_todos_modelos_rl_multinivel <- rbind(indicadores_modelo_rl_multinivel_flg_internet_service,
+                                                 indicadores_modelo_rl_multinivel_contract,
+                                                 indicadores_modelo_rl_multinivel_offer)
+
+
+## Todos os modelos
+indicadores_diversos_modelos <- rbind(select(indicadores_modelo_rl_both, -AIC),
+                                      indicadores_arvore,
+                                      indicadores_rf_sem_county,
+                                      indicadores_rf_dummy,
+                                      indicadores_rf_caret,
+                                      select(indicadores_modelo_rl_multinivel_offer, -AIC))
+
+to_plot_indicadores_diversos_modelos <- indicadores_diversos_modelos %>% 
+    pivot_longer(c(`Acurácia`, Sensitividade, Especificidade), names_to = 'nome_indicador', values_to = 'indicador')
+
+ggplot(to_plot_indicadores_diversos_modelos,
+       aes(`Ponto de corte`, indicador, color = descricao)) +
+    geom_line() +
+    # geom_point(aes(shape = descricao)) +
+    geom_point() +
+    # scale_color_viridis_d(option = 'D') +
+    scale_color_viridis_d(option = 'C') +
+    # scale_color_brewer(palette = 'Set2') +
+    facet_wrap(~ nome_indicador) +
+    labs(y = NULL, color = 'Modelo') +
+    theme(legend.position = 'bottom')
+
+ggsave("plots/indicadores_diversos_modelos.png", width = 12, height = 6)
+
+auc_modelos <- indicadores_diversos_modelos %>% 
+    select(descricao, AUC) %>% 
+    distinct() %>% 
+    arrange(desc(AUC)) %>% 
+    mutate(across(where(is.double), ~ round(.x, 4)))
+
+write_delim(auc_modelos, 'csvs_redacao/auc_diversos_modelos.csv', delim = ';')
+
