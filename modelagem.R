@@ -573,6 +573,20 @@ write_delim(indicadores_rf_caret %>%
 
 
 ## Regressao logistica multinivel
+glmm_get_coeficientes <- function(modelo, descricao) {
+    
+    tmp <- summary(modelo)$coefficients %>%
+        as.data.frame() %>%
+        rownames_to_column() %>%
+        mutate(across(!c(rowname), ~ round(.x, 3))) %>%
+        rename(`Variável preditora` = rowname,
+               Coeficiente = Estimate,
+               `Erro padrão` = `Std. Error`,
+               `Valor z` = `z value`) %>% 
+        mutate(descricao = descricao)
+    
+    return(tmp)
+}
 
 # efeitos aleatorios para testar
 # calcular tambem coeficiente de correlacao intra-classe (icc)
@@ -628,6 +642,18 @@ get_dados_dummizados_para_multinivel <- function(efeito_aleatorio) {
     
     return(list(tc_scaled_dummies_train = tc_scaled_dummies_train,
                 tc_scaled_dummies_test = tc_scaled_dummies_test))
+}
+
+glmm_get_aic_tab <- function(modelo, efeito_aleatorio) {
+    tmp <- summary(modelo)$AICtab %>% 
+        as.data.frame() %>% 
+        rownames_to_column() %>% 
+        rename(valores = 2) %>% 
+        pivot_wider(names_from = rowname, values_from = valores) %>% 
+        mutate(efeito_aleatorio = efeito_aleatorio) %>% 
+        select(efeito_aleatorio, everything())
+    
+    return(tmp)
 }
 
 ## flg_internet_service
@@ -742,7 +768,7 @@ ggplot(to_plot_indicadores_rlm_satisfaction_score,
     labs(y = NULL, color = 'Indicador')
 
 
-resumo_modelos_rlm <- rbind(indicadores_rlm_flg_internet_service,
+tmp_resumo_modelos_rlm <- rbind(indicadores_rlm_flg_internet_service,
                             indicadores_rlm_contract,
                             indicadores_rlm_offer,
                             indicadores_rlm_satisfaction_score) %>% 
@@ -752,8 +778,42 @@ resumo_modelos_rlm <- rbind(indicadores_rlm_flg_internet_service,
     relocate(qtd_efeitos_fixos, .after = AUC) %>% 
     arrange(AIC)
 
+
+complemento_resumo_modelos_rlm <- rbind(glmm_get_aic_tab(rlm_flg_internet_service, 'flg_internet_service'),
+                                        glmm_get_aic_tab(rlm_contract, 'contract'),
+                                        glmm_get_aic_tab(rlm_offer, 'offer'),
+                                        glmm_get_aic_tab(rlm_satisfaction_score, 'satisfaction_score'))
+
+resumo_modelos_rlm <- tmp_resumo_modelos_rlm %>% 
+    mutate(efeito_aleatorio = str_extract(descricao, "(?<=')[a-z_]+")) %>% 
+    left_join(complemento_resumo_modelos_rlm) %>% 
+    select(descricao, efeito_aleatorio, qtd_iteracoes, qtd_efeitos_fixos, AIC, AUC, BIC, logLik, deviance, df.resid, everything())
+
+
 write_delim(resumo_modelos_rlm %>% 
                 mutate(across(where(is.double), ~ round(.x, 3))), 'csvs_redacao/resumo_modelos_rlm.csv', delim = ';')
+
+write_delim(glmm_get_coeficientes(rlm_offer, 'rlm_offer') %>% 
+                mutate(across(where(is.double), ~ round(.x, 3))), 'csvs_redacao/coeficientes_efeitos_fixos_estimados_rlm_offer.csv', delim = ';')
+
+
+to_plot_all_rlm <- rbind(to_plot_indicadores_rlm_flg_internet_service,
+                         to_plot_indicadores_rlm_contract,
+                         to_plot_indicadores_rlm_offer,
+                         to_plot_indicadores_rlm_satisfaction_score) %>% 
+    mutate(efeito_aleatorio = str_extract(descricao, "(?<=')[a-z_]+"))
+
+
+ggplot(to_plot_all_rlm,
+       aes(`Ponto de corte`, indicador, color = efeito_aleatorio)) +
+    geom_line(size = 0.7) +
+    geom_point(size = 0.7) +
+    facet_wrap(~ nome_indicador) +
+    scale_color_viridis_d(option = 'C') +
+    labs(y = NULL, color = 'Efeito aleatório') +
+    theme(legend.position = 'bottom')
+
+ggsave('plots/indicadores_rlm.png', width = 9, height = 5)
 
 tabela_efeitos_fixos_aleatorios <- resumo_modelos_rlm %>% 
     select(descricao, formula_modelo) %>% 
