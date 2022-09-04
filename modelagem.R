@@ -836,6 +836,29 @@ tabela_efeitos_fixos_aleatorios <- resumo_modelos_rlm %>%
 write_delim(tabela_efeitos_fixos_aleatorios,
             'csvs_redacao/tabela_efeitos_fixos_aleatorios.csv', delim = ';')
 
+to_plot_efeitos_fixos_aleatorios <- resumo_modelos_rlm %>% 
+    select(descricao, formula_modelo) %>% 
+    transmute(efeito_aleatorio = str_extract(descricao, "(?<=')[a-z_]+"),
+              efeito_fixo = str_remove_all(formula_modelo, "flg_churn [~] 1 [+]| [+] [(]1.+")) %>% 
+    separate_rows(efeito_fixo, sep = '[+]') %>% 
+    mutate(across(everything(), str_squish)) %>% 
+    distinct() %>% 
+    mutate(flg_presente = 1) %>% 
+    group_by(efeito_fixo) %>% 
+    mutate(qtd_modelos = n()) %>% 
+    ungroup() %>% 
+    arrange(qtd_modelos, efeito_fixo) %>% 
+    mutate(across(c(efeito_fixo, qtd_modelos), as_factor))
+
+ggplot(to_plot_efeitos_fixos_aleatorios,
+       aes(efeito_aleatorio, efeito_fixo, fill = qtd_modelos)) +
+    geom_tile() +
+    scale_fill_viridis_d() +
+    labs(x = "Efeito aleatório", y = "Efeito fixo", fill = 'Quantidade de modelos em que o efeito fixo foi mantido') +
+    theme(legend.position = 'bottom')
+
+ggsave('plots/matriz_efeitos_fixos_e_aleatorios.png', width = 9, height = 12)
+
 ## Todos os modelos
 indicadores_diversos_modelos <- rbind(select(indicadores_modelo_rl_both, -c(AIC)),
                                       indicadores_arvore,
