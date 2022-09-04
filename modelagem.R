@@ -383,10 +383,7 @@ resumo_modelos_rl <- aic_modelos_rl %>%
     mutate(descricao = ifelse(descricao == 'first', 'primeira', 'última')) %>% 
     rename(iteracao = step)
 
-write_delim(resumo_modelos_rl, 'csvs_redacao/resumo_modelos_rl_stepwise.csv', delim = ';')    
-
-
-
+write_delim(resumo_modelos_rl, 'csvs_redacao/resumo_modelos_rl_stepwise.csv', delim = ';')
 
 
 ### Melhor modelo obtido, com AIC = 836.78. criterio both
@@ -611,41 +608,49 @@ todos_ccis <- ccis %>%
 write_delim(todos_ccis, 'csvs_redacao/todos_ccis.csv', delim = ';')
 
 
+get_dados_dummizados_para_multinivel <- function(efeito_aleatorio) {
+    variaveis_dummizar <- tc_scaled %>%
+        select(!where(is.double)) %>%
+        select(-matches('flg_')) %>%
+        select(-any_of(c(efeito_aleatorio))) %>%
+        colnames()
+    
+    tc_scaled_dummies <- dummy_columns(.data = tc_scaled,
+                                       select_columns = variaveis_dummizar,
+                                       remove_selected_columns = TRUE,
+                                       remove_first_dummy = TRUE) %>%
+        rename_with(~ str_replace_all(.x, ' ', '_'), matches(' '))
+    
+    set.seed(3)
+    train_idx <- createDataPartition(tc_scaled_dummies$flg_churn, p = .7, list = F)
+    tc_scaled_dummies_train <- tc_scaled_dummies[train_idx,]
+    tc_scaled_dummies_test <- tc_scaled_dummies[-train_idx,]
+    
+    return(list(tc_scaled_dummies_train = tc_scaled_dummies_train,
+                tc_scaled_dummies_test = tc_scaled_dummies_test))
+}
+
 ## flg_internet_service
-variaveis_dummizar <- tc_scaled %>%
-    select(!where(is.double)) %>%
-    select(-matches('flg_')) %>%
-    select(-any_of(c('flg_internet_service'))) %>%
-    colnames()
+rlm_flg_internet_service <- glmer(flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + tx_concentracao_cobranca_mes_q3 + number_of_referrals + flg_married + number_of_dependents + contract_Two_Year + internet_type_Fiber_Optic + qtd_streamings + contract_One_Year + age + offer_Offer_E + offer_Offer_A + county_El_Dorado_County + flg_device_protection_plan + cltv + flg_multiple_lines + total_charges + valor_cobranca_geral + county_Colusa_County + flg_phone_service + condado_indice_gini_desigualdade_renda + county_Plumas_County + county_Lassen_County + county_Monterey_County + county_Shasta_County + condado_renda_familiar_mediana + condado_idade_mediana_habitantes + county_Trinity_County + county_Tuolumne_County + condado_tx_habitantes_homens + county_Ventura_County + county_Solano_County + condado_tx_habitantes_menor_18_anos + county_Santa_Cruz_County + county_Inyo_County + condado_densidade_populacional + county_Contra_Costa_County + county_Napa_County + county_Santa_Barbara_County + county_Stanislaus_County + county_Glenn_County + qtd_servicos_adicionais + county_Mariposa_County + county_San_Benito_County + county_Calaveras_County + county_Humboldt_County + county_Tehama_County + county_Imperial_County + county_Modoc_County + county_Yolo_County + county_Siskiyou_County + county_Santa_Clara_County + county_Madera_County + county_Marin_County + county_Orange_County + county_Los_Angeles_County + county_Kern_County + county_San_Francisco_County + condado_area_terra_m2 + (1 | flg_internet_service),
+                                  data = get_dados_dummizados_para_multinivel('flg_internet_service')$tc_scaled_dummies_train,
+                                  family = binomial,
+                                  nAGQ = 0)
 
-tc_scaled_dummies <- dummy_columns(.data = tc_scaled,
-                                   select_columns = variaveis_dummizar,
-                                   remove_selected_columns = TRUE,
-                                   remove_first_dummy = TRUE) %>%
-    rename_with(~ str_replace_all(.x, ' ', '_'), matches(' '))
+AIC(rlm_flg_internet_service)
 
-set.seed(3)
-train_idx <- createDataPartition(tc_scaled_dummies$flg_churn, p = .7, list = F)
-tc_scaled_dummies_train <- tc_scaled_dummies[train_idx,]
-tc_scaled_dummies_test <- tc_scaled_dummies[-train_idx,]
-
-
-modelo_rl_multinivel_flg_internet_service <- glmer(flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + tx_concentracao_cobranca_mes_q3 + number_of_referrals + flg_married + number_of_dependents + contract_Two_Year + internet_type_Fiber_Optic + qtd_streamings + contract_One_Year + age + offer_Offer_E + offer_Offer_A + county_El_Dorado_County + flg_device_protection_plan + cltv + flg_multiple_lines + total_charges + valor_cobranca_geral + county_Colusa_County + flg_phone_service + condado_indice_gini_desigualdade_renda + county_Plumas_County + county_Lassen_County + county_Monterey_County + county_Shasta_County + condado_renda_familiar_mediana + condado_idade_mediana_habitantes + county_Trinity_County + county_Tuolumne_County + condado_tx_habitantes_homens + county_Ventura_County + county_Solano_County + condado_tx_habitantes_menor_18_anos + county_Santa_Cruz_County + county_Inyo_County + condado_densidade_populacional + county_Contra_Costa_County + county_Napa_County + county_Santa_Barbara_County + county_Stanislaus_County + county_Glenn_County + qtd_servicos_adicionais + county_Mariposa_County + county_San_Benito_County + county_Calaveras_County + county_Humboldt_County + county_Tehama_County + county_Imperial_County + county_Modoc_County + county_Yolo_County + county_Siskiyou_County + county_Santa_Clara_County + county_Madera_County + county_Marin_County + county_Orange_County + county_Los_Angeles_County + county_Kern_County + county_San_Francisco_County + condado_area_terra_m2 + (1 | flg_internet_service),
-                                                   data = tc_scaled_dummies_train,
-                                                   family = binomial,
-                                                   nAGQ = 0)
-
-AIC(modelo_rl_multinivel_flg_internet_service)
-
-indicadores_modelo_rl_multinivel_flg_internet_service <- seq(0.1, 0.9, 0.05) %>%
-    map_dfr(~ get_indicadores_modelo(modelo_rl_multinivel_flg_internet_service, tc_scaled_dummies_test, cutoff = .x,
+indicadores_rlm_flg_internet_service <- seq(0.1, 0.9, 0.05) %>%
+    map_dfr(~ get_indicadores_modelo(rlm_flg_internet_service,
+                                     get_dados_dummizados_para_multinivel('flg_internet_service')$tc_scaled_dummies_test,
+                                     cutoff = .x,
                                      "Regressão logística multinível stepwise, tendo 'flg_internet_service' como efeito aleatório")) %>% 
-    mutate(AIC = AIC(modelo_rl_multinivel_flg_internet_service))
+    mutate(AIC = AIC(rlm_flg_internet_service),
+           qtd_iteracoes = 10146,
+           formula_modelo = "flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + tx_concentracao_cobranca_mes_q3 + number_of_referrals + flg_married + number_of_dependents + contract_Two_Year + internet_type_Fiber_Optic + qtd_streamings + contract_One_Year + age + offer_Offer_E + offer_Offer_A + county_El_Dorado_County + flg_device_protection_plan + cltv + flg_multiple_lines + total_charges + valor_cobranca_geral + county_Colusa_County + flg_phone_service + condado_indice_gini_desigualdade_renda + county_Plumas_County + county_Lassen_County + county_Monterey_County + county_Shasta_County + condado_renda_familiar_mediana + condado_idade_mediana_habitantes + county_Trinity_County + county_Tuolumne_County + condado_tx_habitantes_homens + county_Ventura_County + county_Solano_County + condado_tx_habitantes_menor_18_anos + county_Santa_Cruz_County + county_Inyo_County + condado_densidade_populacional + county_Contra_Costa_County + county_Napa_County + county_Santa_Barbara_County + county_Stanislaus_County + county_Glenn_County + qtd_servicos_adicionais + county_Mariposa_County + county_San_Benito_County + county_Calaveras_County + county_Humboldt_County + county_Tehama_County + county_Imperial_County + county_Modoc_County + county_Yolo_County + county_Siskiyou_County + county_Santa_Clara_County + county_Madera_County + county_Marin_County + county_Orange_County + county_Los_Angeles_County + county_Kern_County + county_San_Francisco_County + condado_area_terra_m2 + (1 | flg_internet_service)")
 
-to_plot_indicadores_modelo_rl_multinivel_flg_internet_service <- indicadores_modelo_rl_multinivel_flg_internet_service %>% 
+to_plot_indicadores_rlm_flg_internet_service <- indicadores_rlm_flg_internet_service %>% 
     pivot_longer(c(`Acurácia`, Sensitividade, Especificidade), names_to = 'nome_indicador', values_to = 'indicador')
 
-ggplot(to_plot_indicadores_modelo_rl_multinivel_flg_internet_service,
+ggplot(to_plot_indicadores_rlm_flg_internet_service,
        aes(`Ponto de corte`, indicador, color = nome_indicador)) +
     geom_line() +
     geom_point() +
@@ -655,40 +660,26 @@ ggplot(to_plot_indicadores_modelo_rl_multinivel_flg_internet_service,
 
 
 ## contract
-variaveis_dummizar <- tc_scaled %>%
-    select(!where(is.double)) %>%
-    select(-matches('flg_')) %>%
-    select(-any_of(c('contract'))) %>%
-    colnames()
+rlm_contract <- glmer(flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + number_of_referrals + monthly_charge + tx_concentracao_cobranca_mes_q3 + flg_married + number_of_dependents + county_San_Diego_County + flg_premium_tech_support + offer_Offer_E + county_Mendocino_County + county_Lake_County + offer_Offer_A + age + county_Nevada_County + tx_contrib_cobrancas_extras_cobranca_geral + county_Fresno_County + flg_streaming_music + avg_monthly_long_distance_charges + internet_type_Fiber_Optic + qtd_streamings + county_Colusa_County + valor_cobranca_geral + county_Lassen_County + cltv + internet_type_None + qtd_servicos_principais + county_Santa_Barbara_County + county_Mariposa_County + county_Tehama_County + qtd_servicos_adicionais + county_Modoc_County + county_Siskiyou_County + county_Calaveras_County + condado_idade_mediana_habitantes + (1 | contract),
+                      data = get_dados_dummizados_para_multinivel('contract')$tc_scaled_dummies_train,
+                      family = binomial,
+                      nAGQ = 0)
 
-tc_scaled_dummies <- dummy_columns(.data = tc_scaled,
-                                   select_columns = variaveis_dummizar,
-                                   remove_selected_columns = TRUE,
-                                   remove_first_dummy = TRUE) %>%
-    rename_with(~ str_replace_all(.x, ' ', '_'), matches(' '))
+AIC(rlm_contract)
 
-set.seed(3)
-train_idx <- createDataPartition(tc_scaled_dummies$flg_churn, p = .7, list = F)
-tc_scaled_dummies_train <- tc_scaled_dummies[train_idx,]
-tc_scaled_dummies_test <- tc_scaled_dummies[-train_idx,]
-
-
-modelo_rl_multinivel_contract <- glmer(flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + number_of_referrals + monthly_charge + tx_concentracao_cobranca_mes_q3 + flg_married + number_of_dependents + county_San_Diego_County + flg_premium_tech_support + offer_Offer_E + county_Mendocino_County + county_Lake_County + offer_Offer_A + age + county_Nevada_County + tx_contrib_cobrancas_extras_cobranca_geral + county_Fresno_County + flg_streaming_music + avg_monthly_long_distance_charges + internet_type_Fiber_Optic + qtd_streamings + county_Colusa_County + valor_cobranca_geral + county_Lassen_County + cltv + internet_type_None + qtd_servicos_principais + county_Santa_Barbara_County + county_Mariposa_County + county_Tehama_County + qtd_servicos_adicionais + county_Modoc_County + county_Siskiyou_County + county_Calaveras_County + condado_idade_mediana_habitantes + (1 | contract),
-                                       data = tc_scaled_dummies_train,
-                                       family = binomial,
-                                       nAGQ = 0)
-
-AIC(modelo_rl_multinivel_contract)
-
-indicadores_modelo_rl_multinivel_contract <- seq(0.1, 0.9, 0.05) %>%
-    map_dfr(~ get_indicadores_modelo(modelo_rl_multinivel_contract, tc_scaled_dummies_test, cutoff = .x,
+indicadores_rlm_contract <- seq(0.1, 0.9, 0.05) %>%
+    map_dfr(~ get_indicadores_modelo(rlm_contract,
+                                     get_dados_dummizados_para_multinivel('contract')$tc_scaled_dummies_test,
+                                     cutoff = .x,
                                      "Regressão logística multinível stepwise, tendo 'contract' como efeito aleatório")) %>% 
-    mutate(AIC = AIC(modelo_rl_multinivel_contract))
+    mutate(AIC = AIC(rlm_contract),
+           qtd_iteracoes = 17759,
+           formula_modelo = "flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + number_of_referrals + monthly_charge + tx_concentracao_cobranca_mes_q3 + flg_married + number_of_dependents + county_San_Diego_County + flg_premium_tech_support + offer_Offer_E + county_Mendocino_County + county_Lake_County + offer_Offer_A + age + county_Nevada_County + tx_contrib_cobrancas_extras_cobranca_geral + county_Fresno_County + flg_streaming_music + avg_monthly_long_distance_charges + internet_type_Fiber_Optic + qtd_streamings + county_Colusa_County + valor_cobranca_geral + county_Lassen_County + cltv + internet_type_None + qtd_servicos_principais + county_Santa_Barbara_County + county_Mariposa_County + county_Tehama_County + qtd_servicos_adicionais + county_Modoc_County + county_Siskiyou_County + county_Calaveras_County + condado_idade_mediana_habitantes + (1 | contract)")
 
-to_plot_indicadores_modelo_rl_multinivel_contract <- indicadores_modelo_rl_multinivel_contract %>% 
+to_plot_indicadores_rlm_contract <- indicadores_rlm_contract %>% 
     pivot_longer(c(`Acurácia`, Sensitividade, Especificidade), names_to = 'nome_indicador', values_to = 'indicador')
 
-ggplot(to_plot_indicadores_modelo_rl_multinivel_contract,
+ggplot(to_plot_indicadores_rlm_contract,
        aes(`Ponto de corte`, indicador, color = nome_indicador)) +
     geom_line() +
     geom_point() +
@@ -697,41 +688,27 @@ ggplot(to_plot_indicadores_modelo_rl_multinivel_contract,
 
 
 ## offer
-variaveis_dummizar <- tc_scaled %>%
-    select(!where(is.double)) %>%
-    select(-matches('flg_')) %>%
-    select(-any_of(c('offer'))) %>%
-    colnames()
+rlm_offer <- glmer(flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + internet_type_None + number_of_referrals + tx_concentracao_cobranca_mes_q3 + flg_married + number_of_dependents + contract_Two_Year + monthly_charge + county_San_Diego_County + flg_premium_tech_support + qtd_servicos_principais + contract_One_Year + county_Mendocino_County + county_Lake_County + county_Nevada_County + age + county_Tulare_County + county_Fresno_County + tx_contrib_cobrancas_extras_cobranca_geral + county_El_Dorado_County + internet_type_Fiber_Optic + flg_online_backup + county_San_Mateo_County + cltv + county_Colusa_County + avg_monthly_long_distance_charges + county_Lassen_County + condado_renda_familiar_mediana + county_Shasta_County + county_Plumas_County + condado_idade_mediana_habitantes + county_Trinity_County + county_Tuolumne_County + valor_cobranca_geral + total_charges + flg_streaming_tv + flg_streaming_movies + flg_streaming_music + county_Monterey_County + county_Santa_Barbara_County + (1 | offer),
+                   data = get_dados_dummizados_para_multinivel('offer')$tc_scaled_dummies_train,
+                   family = binomial,
+                   nAGQ = 0)
 
-tc_scaled_dummies <- dummy_columns(.data = tc_scaled,
-                                   select_columns = variaveis_dummizar,
-                                   remove_selected_columns = TRUE,
-                                   remove_first_dummy = TRUE) %>%
-    rename_with(~ str_replace_all(.x, ' ', '_'), matches(' '))
+AIC(rlm_offer)
+summary(rlm_offer)
 
-set.seed(3)
-train_idx <- createDataPartition(tc_scaled_dummies$flg_churn, p = .7, list = F)
-tc_scaled_dummies_train <- tc_scaled_dummies[train_idx,]
-tc_scaled_dummies_test <- tc_scaled_dummies[-train_idx,]
-
-
-modelo_rl_multinivel_offer <- glmer(flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + internet_type_None + number_of_referrals + tx_concentracao_cobranca_mes_q3 + flg_married + number_of_dependents + contract_Two_Year + monthly_charge + county_San_Diego_County + flg_premium_tech_support + qtd_servicos_principais + contract_One_Year + county_Mendocino_County + county_Lake_County + county_Nevada_County + age + county_Tulare_County + county_Fresno_County + tx_contrib_cobrancas_extras_cobranca_geral + county_El_Dorado_County + internet_type_Fiber_Optic + flg_online_backup + county_San_Mateo_County + cltv + county_Colusa_County + avg_monthly_long_distance_charges + county_Lassen_County + condado_renda_familiar_mediana + county_Shasta_County + county_Plumas_County + condado_idade_mediana_habitantes + county_Trinity_County + county_Tuolumne_County + valor_cobranca_geral + total_charges + flg_streaming_tv + flg_streaming_movies + flg_streaming_music + county_Monterey_County + county_Santa_Barbara_County + (1 | offer),
-                                    data = tc_scaled_dummies_train,
-                                    family = binomial,
-                                    nAGQ = 0)
-
-AIC(modelo_rl_multinivel_offer)
-summary(modelo_rl_multinivel_offer)
-
-indicadores_modelo_rl_multinivel_offer <- seq(0.1, 0.9, 0.05) %>%
-    map_dfr(~ get_indicadores_modelo(modelo_rl_multinivel_offer, tc_scaled_dummies_test, cutoff = .x,
+indicadores_rlm_offer <- seq(0.1, 0.9, 0.05) %>%
+    map_dfr(~ get_indicadores_modelo(rlm_offer,
+                                     get_dados_dummizados_para_multinivel('offer')$tc_scaled_dummies_test,
+                                     cutoff = .x,
                                      "Regressão logística multinível stepwise, tendo 'offer' como efeito aleatório")) %>%
-    mutate(AIC = AIC(modelo_rl_multinivel_offer))
+    mutate(AIC = AIC(rlm_offer),
+           qtd_iteracoes = 9833,
+           formula_modelo = "flg_churn ~ 1 + satisfaction_score_4 + satisfaction_score_5 + satisfaction_score_3 + flg_online_security + internet_type_None + number_of_referrals + tx_concentracao_cobranca_mes_q3 + flg_married + number_of_dependents + contract_Two_Year + monthly_charge + county_San_Diego_County + flg_premium_tech_support + qtd_servicos_principais + contract_One_Year + county_Mendocino_County + county_Lake_County + county_Nevada_County + age + county_Tulare_County + county_Fresno_County + tx_contrib_cobrancas_extras_cobranca_geral + county_El_Dorado_County + internet_type_Fiber_Optic + flg_online_backup + county_San_Mateo_County + cltv + county_Colusa_County + avg_monthly_long_distance_charges + county_Lassen_County + condado_renda_familiar_mediana + county_Shasta_County + county_Plumas_County + condado_idade_mediana_habitantes + county_Trinity_County + county_Tuolumne_County + valor_cobranca_geral + total_charges + flg_streaming_tv + flg_streaming_movies + flg_streaming_music + county_Monterey_County + county_Santa_Barbara_County + (1 | offer)")
 
-to_plot_indicadores_modelo_rl_multinivel_offer <- indicadores_modelo_rl_multinivel_offer %>% 
+to_plot_indicadores_rlm_offer <- indicadores_rlm_offer %>% 
     pivot_longer(c(`Acurácia`, Sensitividade, Especificidade), names_to = 'nome_indicador', values_to = 'indicador')
 
-ggplot(to_plot_indicadores_modelo_rl_multinivel_offer,
+ggplot(to_plot_indicadores_rlm_offer,
        aes(`Ponto de corte`, indicador, color = nome_indicador)) +
     geom_line() +
     geom_point() +
@@ -739,18 +716,67 @@ ggplot(to_plot_indicadores_modelo_rl_multinivel_offer,
     labs(y = NULL, color = 'Indicador')
 
 
-indicadores_todos_modelos_rl_multinivel <- rbind(indicadores_modelo_rl_multinivel_flg_internet_service,
-                                                 indicadores_modelo_rl_multinivel_contract,
-                                                 indicadores_modelo_rl_multinivel_offer)
+## satisfaction_score
+rlm_satisfaction_score <- glmer(flg_churn ~ 1 + flg_online_security + number_of_referrals + monthly_charge + tx_concentracao_cobranca_mes_q3 + contract_Two_Year + flg_married + number_of_dependents + flg_premium_tech_support + flg_phone_service + contract_One_Year + offer_Offer_E + county_Mendocino_County + offer_Offer_A + age + tx_contrib_cobrancas_extras_cobranca_geral + county_El_Dorado_County + county_Tulare_County + total_charges + county_San_Mateo_County + flg_streaming_music + avg_monthly_long_distance_charges + internet_type_Fiber_Optic + flg_online_backup + qtd_streamings + county_Colusa_County + county_Lassen_County + cltv + county_Shasta_County + condado_renda_familiar_mediana + county_Ventura_County + county_Santa_Cruz_County + condado_idade_mediana_habitantes + county_Plumas_County + county_Trinity_County + county_Tuolumne_County + condado_indice_gini_desigualdade_renda + county_Contra_Costa_County + county_Santa_Clara_County + total_long_distance_charges + condado_densidade_populacional + (1 | satisfaction_score),
+                                data = get_dados_dummizados_para_multinivel('satisfaction_score')$tc_scaled_dummies_train,
+                                family = binomial,
+                                nAGQ = 0)
 
+indicadores_rlm_satisfaction_score <- seq(0.1, 0.9, 0.05) %>%
+    map_dfr(~ get_indicadores_modelo(rlm_satisfaction_score,
+                                     get_dados_dummizados_para_multinivel('satisfaction_score')$tc_scaled_dummies_test,
+                                     cutoff = .x,
+                                     "Regressão logística multinível stepwise, tendo 'satisfaction_score' como efeito aleatório")) %>%
+    mutate(AIC = AIC(rlm_satisfaction_score),
+           qtd_iteracoes = 10783,
+           formula_modelo = "flg_churn ~ 1 + flg_online_security + number_of_referrals + monthly_charge + tx_concentracao_cobranca_mes_q3 + contract_Two_Year + flg_married + number_of_dependents + flg_premium_tech_support + flg_phone_service + contract_One_Year + offer_Offer_E + county_Mendocino_County + offer_Offer_A + age + tx_contrib_cobrancas_extras_cobranca_geral + county_El_Dorado_County + county_Tulare_County + total_charges + county_San_Mateo_County + flg_streaming_music + avg_monthly_long_distance_charges + internet_type_Fiber_Optic + flg_online_backup + qtd_streamings + county_Colusa_County + county_Lassen_County + cltv + county_Shasta_County + condado_renda_familiar_mediana + county_Ventura_County + county_Santa_Cruz_County + condado_idade_mediana_habitantes + county_Plumas_County + county_Trinity_County + county_Tuolumne_County + condado_indice_gini_desigualdade_renda + county_Contra_Costa_County + county_Santa_Clara_County + total_long_distance_charges + condado_densidade_populacional + (1 | satisfaction_score)")
+
+to_plot_indicadores_rlm_satisfaction_score <- indicadores_rlm_satisfaction_score %>% 
+    pivot_longer(c(`Acurácia`, Sensitividade, Especificidade), names_to = 'nome_indicador', values_to = 'indicador')
+
+ggplot(to_plot_indicadores_rlm_satisfaction_score,
+       aes(`Ponto de corte`, indicador, color = nome_indicador)) +
+    geom_line() +
+    geom_point() +
+    scale_color_viridis_d(option = 'D') +
+    labs(y = NULL, color = 'Indicador')
+
+
+resumo_modelos_rlm <- rbind(indicadores_rlm_flg_internet_service,
+                            indicadores_rlm_contract,
+                            indicadores_rlm_offer,
+                            indicadores_rlm_satisfaction_score) %>% 
+    select(descricao, qtd_iteracoes, AIC, AUC, formula_modelo) %>% 
+    distinct() %>% 
+    mutate(qtd_efeitos_fixos = str_count(str_remove(formula_modelo, "flg_churn [~] 1 [+] "), "[+]")) %>% 
+    relocate(qtd_efeitos_fixos, .after = AUC) %>% 
+    arrange(AIC)
+
+write_delim(resumo_modelos_rlm %>% 
+                mutate(across(where(is.double), ~ round(.x, 3))), 'csvs_redacao/resumo_modelos_rlm.csv', delim = ';')
+
+tabela_efeitos_fixos_aleatorios <- resumo_modelos_rlm %>% 
+    select(descricao, formula_modelo) %>% 
+    transmute(efeito_aleatorio = str_extract(descricao, "(?<=')[a-z_]+"),
+              efeito_fixo = str_remove_all(formula_modelo, "flg_churn [~] 1 [+]| [+] [(]1.+")) %>% 
+    separate_rows(efeito_fixo, sep = '[+]') %>% 
+    mutate(across(everything(), str_squish)) %>% 
+    distinct() %>% 
+    mutate(flg_presente = 1) %>% 
+    pivot_wider(names_from = efeito_aleatorio, values_from = flg_presente, values_fill = 0) %>% 
+    mutate(qtd_modelos = offer + contract + satisfaction_score + flg_internet_service) %>% 
+    arrange(desc(qtd_modelos), desc(offer))
+
+write_delim(tabela_efeitos_fixos_aleatorios,
+            'csvs_redacao/tabela_efeitos_fixos_aleatorios.csv', delim = ';')
 
 ## Todos os modelos
-indicadores_diversos_modelos <- rbind(select(indicadores_modelo_rl_both, -AIC),
+indicadores_diversos_modelos <- rbind(select(indicadores_modelo_rl_both, -c(AIC)),
                                       indicadores_arvore,
                                       indicadores_rf_sem_county,
                                       indicadores_rf_dummy,
                                       indicadores_rf_caret,
-                                      select(indicadores_modelo_rl_multinivel_offer, -AIC))
+                                      select(indicadores_rlm_offer, -(AIC:last_col())))
 
 to_plot_indicadores_diversos_modelos <- indicadores_diversos_modelos %>% 
     pivot_longer(c(`Acurácia`, Sensitividade, Especificidade), names_to = 'nome_indicador', values_to = 'indicador')
