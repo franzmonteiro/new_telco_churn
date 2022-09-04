@@ -1,0 +1,25 @@
+
+
+Random effects:
+ Groups               Name        Variance Std.Dev.
+ flg_internet_service (Intercept) 0.2286   0.4782  
+Number of obs: 4931, groups:  flg_internet_service, 2
+
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ contract (Intercept) 0.7757   0.8807  
+Number of obs: 4931, groups:  contract, 3
+
+
+Random effects:
+ Groups Name        Variance Std.Dev.
+ offer  (Intercept) 0.06705  0.2589  
+Number of obs: 4931, groups:  offer, 6
+
+
+Random effects:
+ Groups             Name        Variance Std.Dev.
+ satisfaction_score (Intercept) 403.2    20.08   
+Number of obs: 4931, groups:  satisfaction_score, 5
+

@@ -797,6 +797,12 @@ write_delim(glmm_get_coeficientes(rlm_offer, 'rlm_offer') %>%
                 mutate(across(where(is.double), ~ round(.x, 3))), 'csvs_redacao/coeficientes_efeitos_fixos_estimados_rlm_offer.csv', delim = ';')
 
 
+summary(rlm_flg_internet_service)
+summary(rlm_contract)
+summary(rlm_offer)
+summary(rlm_satisfaction_score)
+
+
 to_plot_all_rlm <- rbind(to_plot_indicadores_rlm_flg_internet_service,
                          to_plot_indicadores_rlm_contract,
                          to_plot_indicadores_rlm_offer,
