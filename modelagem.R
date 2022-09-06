@@ -353,6 +353,13 @@ to_plot_aic_modelos_rl <- aic_modelos_rl %>%
                            var == 'qtd_variaveis' ~ 'Quantidade de variáveis',
                            T ~ 'Outro'))
 
+tmp <- to_plot_aic_modelos_rl %>% 
+    select(criterio, step, var, value) %>% 
+    pivot_wider(names_from = criterio, values_from = value) %>% 
+    arrange(var, step) %>% 
+    filter(var != 'Quantidade de variáveis') %>% 
+    mutate(flg = Progressiva == Ambas)
+
 ggplot(to_plot_aic_modelos_rl %>% 
            filter(var == 'AIC'), aes(step, value, color = criterio)) +
     geom_line() +
