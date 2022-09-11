@@ -879,9 +879,8 @@ to_plot_indicadores_diversos_modelos <- indicadores_diversos_modelos %>%
 
 ggplot(to_plot_indicadores_diversos_modelos,
        aes(`Ponto de corte`, indicador, color = descricao)) +
-    geom_line() +
-    # geom_point(aes(shape = descricao)) +
-    geom_point() +
+    geom_line(size = 0.7) +
+    geom_point(size = 0.7) +
     # scale_color_viridis_d(option = 'D') +
     scale_color_viridis_d(option = 'C') +
     # scale_color_brewer(palette = 'Set2') +
