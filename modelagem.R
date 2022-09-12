@@ -336,7 +336,7 @@ aic_modelo_rl_backward <- read_delim('csvs_redacao/modelo_rl_backward.csv', deli
            step = row_number())
 
 aic_modelo_rl_both <- read_delim('csvs_redacao/modelo_rl_both.csv', delim = ';') %>% 
-    mutate(criterio = 'Ambas',
+    mutate(criterio = 'Bidirecional',
            step = row_number())
 
 aic_modelos_rl <- aic_modelo_rl_forward %>% 
@@ -358,13 +358,13 @@ tmp <- to_plot_aic_modelos_rl %>%
     pivot_wider(names_from = criterio, values_from = value) %>% 
     arrange(var, step) %>% 
     filter(var != 'Quantidade de variáveis') %>% 
-    mutate(flg = Progressiva == Ambas)
+    mutate(flg = Progressiva == Bidirecional)
 
 ggplot(to_plot_aic_modelos_rl %>% 
            filter(var == 'AIC'), aes(step, value, color = criterio)) +
     geom_line() +
     scale_color_viridis_d() +
-    labs(x = 'Iteração', y = 'AIC', color = 'Direção')
+    labs(x = 'Iteração', y = 'AIC', color = 'Estratégia')
 
 ggsave("plots/modelos_rl_stepwise_reducao_dos_aics.png", width = 9, height = 5)
 
@@ -373,7 +373,7 @@ ggplot(to_plot_aic_modelos_rl %>%
            filter(var == 'Quantidade de variáveis'), aes(step, value, color = criterio)) +
     geom_line() +
     scale_color_viridis_d() +
-    labs(x = 'Iteração', y = 'Quantidade de variáveis', color = 'Direção')
+    labs(x = 'Iteração', y = 'Quantidade de variáveis', color = 'Estratégia')
 
 ggsave("plots/modelos_rl_stepwise_qtd_variaveis.png", width = 9, height = 5)
 
