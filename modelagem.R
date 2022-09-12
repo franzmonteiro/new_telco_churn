@@ -454,6 +454,8 @@ indicadores_arvore <- seq(0.1, 0.9, 0.05) %>%
     map_dfr(~ get_indicadores_modelo(modelo_arvore_podada, tc_test, cutoff = .x, descricao = 'Árvore de decisão'))
 
 
+summary(modelo_arvore_podada)
+
 write_delim(indicadores_arvore %>% 
                 mutate(across(where(is.double), ~ round(.x, 3))), 'csvs_redacao/indicadores_arvore_decisao.csv', ';')
 
@@ -477,7 +479,8 @@ colnames(tmp_regras_arvore) <- c('flg_churn', paste0('V', 2:ncol(tmp_regras_arvo
 regras_arvore <- tmp_regras_arvore %>% 
     unite('regra', -c(flg_churn, last_col()), sep = ' ', remove = TRUE, na.rm = TRUE) %>% 
     mutate(regra = str_squish(regra)) %>% 
-    rename(cover = last_col())
+    rename(cover = last_col()) %>% 
+    mutate(cover = as.double(str_remove_all(cover, '[^0-9]')))
 
 write_delim(regras_arvore, 'csvs_redacao/regras_arvore_decisao.csv', ';')
 
@@ -870,9 +873,10 @@ ggsave('plots/matriz_efeitos_fixos_e_aleatorios.png', width = 9, height = 12)
 indicadores_diversos_modelos <- rbind(select(indicadores_modelo_rl_both, -c(AIC)),
                                       indicadores_arvore,
                                       indicadores_rf_sem_county,
-                                      indicadores_rf_dummy,
-                                      indicadores_rf_caret,
-                                      select(indicadores_rlm_offer, -(AIC:last_col())))
+                                      indicadores_rf_dummy) %>% 
+    mutate(descricao = str_remove(descricao, ' stepwise'),
+           descricao = str_replace(descricao, 'dummy county', "'county' transformada"),
+           descricao = str_replace(descricao, 'sem county', "sem 'county'"))
 
 to_plot_indicadores_diversos_modelos <- indicadores_diversos_modelos %>% 
     pivot_longer(c(`Acurácia`, Sensitividade, Especificidade), names_to = 'nome_indicador', values_to = 'indicador')
