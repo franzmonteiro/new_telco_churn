@@ -445,8 +445,15 @@ plotcp(modelo_arvore)
 modelo_arvore_podada <- prune(modelo_arvore,
                               cp = modelo_arvore$cptable[which.min(modelo_arvore$cptable[,"xerror"]), "CP"])
 
-printcp(modelo_arvore_podada)
+tmp <- printcp(modelo_arvore_podada) %>% 
+    as.data.frame()
+
 plotcp(modelo_arvore_podada)
+
+ggplot(tmp, aes(nsplit, xerror)) +
+    # scale_x_reverse() +
+    geom_line() +
+    geom_point()
 
 mean(tc_test$flg_churn == predict(modelo_arvore_podada, tc_test, type = "class"))
 
@@ -484,7 +491,7 @@ regras_arvore <- tmp_regras_arvore %>%
 
 write_delim(regras_arvore, 'csvs_redacao/regras_arvore_decisao.csv', ';')
 
-rpart.plot(modelo_arvore, type = 3, clip.right.labs = FALSE, branch = .3, under = TRUE)
+rpart.plot(modelo_arvore_podada, type = 3, clip.right.labs = FALSE, branch = .3, under = TRUE)
 
 ## Random forest
 set.seed(3)
